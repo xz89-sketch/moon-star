@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>英语学习网页</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn:hover {
+      background-color: #45a049;
+    }
+    .word-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .progress-bar {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress {
+      height: 20px;
+      background-color: #4CAF50;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>英语学习网页</h1>
+
+    <!-- 功能一：上传词表 -->
+    <div class="section">
+      <h2>上传词表</h2>
+      <input type="file" id="fileInput" accept=".pdf,.txt">
+      <button class="btn" onclick="uploadFile()">上传并解析</button>
+    </div>
+
+    <!-- 功能二：设置每日学习目标 -->
+    <div class="section">
+      <h2>设置每日学习目标</h2>
+      <label>每日学习单词数量：</label>
+      <input type="number" id="dailyGoal" value="10" min="1">
+      <button class="btn" onclick="setDailyGoal()">设置目标</button>
+    </div>
+
+    <!-- 功能四：学习计划管理 -->
+    <div class="section">
+      <h2>学习计划</h2>
+      <button class="btn" onclick="generateDailyWords()">生成今日学习内容</button>
+      <button class="btn" onclick="showNextBatch()">显示下一批</button>
+      <div class="progress-bar">
+        <div class="progress" id="progressBar" style="width: 0%;">0%</div>
+      </div>
+      <div id="wordList"></div>
+    </div>
+  </div>
+
+  <script>
+    // 模拟词典数据
+    const dictionary = {
+      "apple": { phonetic: "/ˈæp.əl/", pos: "n.", meaning: "苹果" },
+      "banana": { phonetic: "/bəˈnɑː.nə/", pos: "n.", meaning: "香蕉" },
+      "cat": { phonetic: "/kæt/", pos: "n.", meaning: "猫" },
+      "dog": { phonetic: "/dɒɡ/", pos: "n.", meaning: "狗" },
+      "elephant": { phonetic: "/ˈel.ɪ.fənt/", pos: "n.", meaning: "大象" },
+      "fish": { phonetic: "/fɪʃ/", pos: "n.", meaning: "鱼" },
+      "grape": { phonetic: "/ɡreɪp/", pos: "n.", meaning: "葡萄" },
+      "house": { phonetic: "/haʊs/", pos: "n.", meaning: "房子" },
+      "ice": { phonetic: "/aɪs/", pos: "n.", meaning: "冰" },
+      "jump": { phonetic: "/dʒʌmp/", pos: "v.", meaning: "跳" }
+    };
+
+    let allWords = [];
+    let dailyWords = [];
+    let learnedWords = new Set();
+    let batchSize = 5;
+    let currentBatchIndex = 0;
+
+    function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("请选择一个文件！");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        parseFileContent(content);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseFileContent(content) {
+      // 简单解析，按行分割
+      const lines = content.split('\n');
+      allWords = [];
+      lines.forEach(line => {
+        const word = line.trim();
+        if (word && dictionary[word]) {
+          allWords.push({
+            word: word,
+            phonetic: dictionary[word].phonetic,
+            pos: dictionary[word].pos,
+            meaning: dictionary[word].meaning,
+            mastery: 0 // 0: 未学, 1: 认识, 2: 掌握, 3: 熟练
+          });
+        }
+      });
+
+      alert(`成功解析并添加了 ${allWords.length} 个单词`);
+    }
+
+    function setDailyGoal() {
+      const goal = parseInt(document.getElementById('dailyGoal').value);
+      if (isNaN(goal) || goal <= 0) {
+        alert("请输入有效的单词数量！");
+        return;
+      }
+      batchSize = goal;
+      alert(`每日学习目标已设置为 ${goal} 个单词`);
+    }
+
+    function generateDailyWords() {
+      if (allWords.length === 0) {
+        alert("请先上传词表！");
+        return;
+      }
+      // 随机打乱并选择指定数量
+      dailyWords = [...allWords].sort(() => 0.5 - Math.random()).slice(0, batchSize);
+      currentBatchIndex = 0;
+      showBatch();
+      updateProgress();
+    }
+
+    function showBatch() {
+      const container = document.getElementById('wordList');
+      container.innerHTML = '';
+      const start = currentBatchIndex * batchSize;
+      const end = Math.min(start + batchSize, dailyWords.length);
+      const batch = dailyWords.slice(start, end);
+
+      batch.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'word-item';
+        div.innerHTML = `
+          <p><strong>${item.word}</strong> ${item.phonetic} ${item.pos} ${item.meaning}</p>
+          <button class="btn" onclick="markWord(${start + index}, 1)">认识</button>
+          <button class="btn" onclick="markWord(${start + index}, 2)">掌握</button>
+          <button class="btn" onclick="markWord(${start + index}, 3)">熟练</button>
+          <button class="btn" style="background-color:red;" onclick="removeWord(${start + index})">删除</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function markWord(index, level) {
+      dailyWords[index].mastery = level;
+      learnedWords.add(dailyWords[index].word);
+      updateProgress();
+    }
+
+    function removeWord(index) {
+      dailyWords.splice(index, 1);
+      updateProgress();
+      showBatch(); // 重新显示当前批次
+    }
+
+    function showNextBatch() {
+      if ((currentBatchIndex + 1) * batchSize < dailyWords.length) {
+        currentBatchIndex++;
+        showBatch();
+      } else {
+        alert("已学完所有单词！");
+      }
+    }
+
+    function updateProgress() {
+      const total = dailyWords.length;
+      const learned = dailyWords.filter(w => w.mastery > 0).length;
+      const percentage = total ? Math.round((learned / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = `${percentage}%`;
+      document.getElementById('progressBar').innerText = `${percentage}%`;
+    }
+  </script>
+</body>
+</html>
